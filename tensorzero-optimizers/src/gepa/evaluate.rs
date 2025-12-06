@@ -21,8 +21,8 @@ use tensorzero_core::{
 };
 
 use evaluations::{
-    stats::EvaluationInfo, EvaluationCoreArgs, EvaluationStats, EvaluationVariant, EvaluatorStats,
-    OutputFormat,
+    stats::EvaluationInfo, EvaluationCoreArgs, EvaluationFunctionConfig, EvaluationStats,
+    EvaluationVariant, EvaluatorStats, OutputFormat,
 };
 
 // Type aliases for score map signatures used for pareto filtering
@@ -163,13 +163,15 @@ pub async fn evaluate_variant(params: EvaluateVariantParams) -> Result<Evaluatio
 
     // Get function name from evaluation config and look up function
     let EvaluationConfig::Inference(ref inference_eval_config) = *params.evaluation_config;
-    let function_config = get_function(&params.functions, &inference_eval_config.function_name)
+    let function_config_arc = get_function(&params.functions, &inference_eval_config.function_name)
         .map_err(|e| {
             Error::new(ErrorDetails::InternalError {
                 message: format!("Failed to get function config: {e}"),
             })
-        })?
-        .into_owned();
+        })?;
+    let function_config = Arc::new(EvaluationFunctionConfig::from(
+        function_config_arc.as_ref().as_ref(),
+    ));
 
     // Create EvaluationCoreArgs
     let core_args = EvaluationCoreArgs {
